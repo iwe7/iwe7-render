@@ -35,9 +35,7 @@ export interface RenderOptions {
 
 let dragData: any;
 
-@Injectable({
-  providedIn: "root"
-})
+@Injectable()
 export class MeepoRender {
   private componentFactoryResolver: ComponentFactoryResolver;
   private components: Map<string, any> = new Map();
