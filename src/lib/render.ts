@@ -160,7 +160,6 @@ export class MeepoRender {
       }),
       // 绑定inputs
       tap(instance => {
-        console.log(instance);
         Object.defineProperty(instance, 'json', {
           get: () => {
             return json;
