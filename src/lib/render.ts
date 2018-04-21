@@ -137,7 +137,7 @@ export class MeepoRender {
           } else {
             console.warn(
               `${
-                json.selector
+              json.selector
               }的ngModule->getComponentByName方法没有返回正确的值`
             );
             return false;
@@ -160,6 +160,14 @@ export class MeepoRender {
       }),
       // 绑定inputs
       tap(instance => {
+        Object.defineProperty(instance, 'json', {
+          get: () => {
+            return json;
+          },
+          set: val => {
+            json = val;
+          }
+        });
         _map(json.inputs || {}, (item, key) => {
           Object.defineProperty(instance, key, {
             get: () => {
