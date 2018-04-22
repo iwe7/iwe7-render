@@ -12,6 +12,8 @@ import {
   ɵisPromise,
   Type
 } from "@angular/core";
+import { Store } from '@ngrx/store';
+
 import { fromPromise } from "rxjs/observable/fromPromise";
 import { from, Observable, Subscriber, fromEvent } from "rxjs";
 import { map, tap, switchMap, filter } from "rxjs/operators";
@@ -29,7 +31,7 @@ export interface RenderChildren {
 export interface RenderOptions {
   selector: string;
   inputs: KeyValue;
-  outputs: string[];
+  outputs: KeyValue;
   children: RenderChildren;
 }
 
@@ -41,6 +43,7 @@ let dragData: any;
 export class MeepoRender {
   private componentFactoryResolver: ComponentFactoryResolver;
   private components: Map<string, any> = new Map();
+  private store: Store<any>;
   constructor(
     private moduleFactoryLoader: NgModuleFactoryLoader,
     private moduleRef: NgModuleRef<any>,
@@ -49,6 +52,7 @@ export class MeepoRender {
     private ngCompiler: Compiler
   ) {
     this.lazy = flatten(this.lazy);
+    this.store = this.injector.get(Store, null);
     this.lazy.map((res: any) => {
       let { children } = res;
       if (children) {
@@ -165,6 +169,7 @@ export class MeepoRender {
             return json;
           },
           set: val => {
+            // 设置数据
             json = val;
           }
         });
@@ -178,48 +183,6 @@ export class MeepoRender {
             }
           });
         });
-      }),
-      tap((instance: any) => {
-        if (instance.draggable) {
-          console.log("我可以拖动");
-          fromEvent(instance.ele.nativeElement, "dragstart")
-            .pipe(
-              tap((evt: DragEvent) => {
-                dragData = json;
-              })
-            )
-            .subscribe();
-        }
-        if (instance.dropable) {
-          fromEvent(instance.ele.nativeElement, "dragover")
-            .pipe(
-              // debug
-              tap((res: DragEvent) => {
-                res.preventDefault();
-              })
-            )
-            .subscribe();
-          fromEvent(instance.ele.nativeElement, "drop")
-            .pipe(
-              tap((evt: DragEvent) => {
-                // 拿到拖放数据，赋值
-                if (json.children) {
-                  json.children.view.push(dragData);
-                } else {
-                  json["children"] = {
-                    view: [dragData]
-                  };
-                }
-                this.compiler(dragData, instance["view"]).subscribe(
-                  (res: any) => {
-                    console.log("to do ");
-                  }
-                );
-                // json.children.dropView = dragData;
-              })
-            )
-            .subscribe();
-        }
       }),
       // 绑定outputs
       switchMap(instance => {
@@ -246,16 +209,24 @@ export class MeepoRender {
               }
             }
           });
-          (json.outputs || []).map(output => {
-            if (ɵisObservable(instance[output])) {
+          json.outputs = json.outputs || {};
+          for (let key in json.outputs) {
+            let output = json.outputs[key];
+            if (ɵisObservable(instance[key])) {
               instance[output].subscribe(res => {
+                if (output) {
+                  this.store.dispatch({
+                    type: output,
+                    payload: res
+                  });
+                }
                 subscriber.next({
                   type: output,
                   data: res
                 });
               });
             }
-          });
+          }
         });
       })
     );
